@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#define __DEBUG__ 0
 
 void error(const char* fmt, ...)
 {
@@ -221,64 +222,6 @@ void iprintf(int i,const char* fmt,...){
  vprintf(fmt,args);
  va_end(args);
 }
-
-void print_node(n_node*,int)
-void print_binary(n_binary*,int);
-void print_const(n_const*,int);
-void print_var(n_var*,int);
-void print_neg(n_neg*,int);
-void print_call(n_call*,int);
-void print_block(n_block*,int);
-void print_func(n_func*,int);
-void print_arg(n_arg*,int);
-void print_assign(n_assign*,int);
-void print_return(n_return*,int);
-void print_decl(n_decl* n,int);
-void print_ifs(n_ifs* n,int);
-
-void print_binary(n_binary* n,int depth){
- iprintf(depth,"n_binary:\n");
- print_node((n_node*)n->left,depth+1);
- iprintf(depth+1,"op:%s\n",n->op);
- print_node((n_node*)n->right,depth+1);
-}
-void print_const(n_const* n,int depth){iprintf(depth,"n_const:%ld\n",n->val);}
-void print_var(n_var* n,int depth){iprintf(depth,"n_var:%s\n",n->name);}
-void print_neg(n_neg* n,int depth){
- iprintf(depth,"n_neg:\n");
- print_binary(n->rval,depth+1);
-}
-void print_call(n_call* n,int depth){
- iprintf(depth,"n_call:%s\n",n->name);
- for(int i=0;i<n->args->len;i++){
-  print_arg((n_arg*)vecget(n->args,i),depth+1);
- }
-}
-void print_block(n_block* n,int depth){
- iprintf(depth,"n_block:\n");
- for(int i=0;i<n->body->len;i++){
-  print_node((n_node*)vecget(n->body,i),depth+1);
- }
-}
-void print_func(n_func* n,int depth){
- iprintf(depth,"n_func:%s\n",n->name);
- for(int i=0;i<n->args->len;i++){
-  print_arg((n_arg*)vecget(n->args,i),depth+1);
- }
- print_block(n->body,depth+1);
-}
-void print_arg(n_arg* n,int depth){iprintf(depth,"n_arg:{`%s`,`%s`}\n",n->name,n->type)}
-void print_assign(n_assign* n,int depth){
- iprintf(depth,"n_assign:\n");
- iprintf(depth+1,"%s=\n",n->name);
- print_binary(n->rval,depth+1);
-}
-void print_return(n_return* n,int depth){
- iprintf(depth,"n_return:\n");
- print_binary(n->rval,depth+1);
-}
-void print_decl(n_decl* n,int depth){iprintf(depth,"n_decl:{`%s`,`%s`}\n",n->name,n->type);}
-void print_node(n_node* n,int depth){}
 
 token* fetch(vec* tokens,int* p){return(*p<tokens->len)?(token*)vecget(tokens,*p):newtok("eof","eof");}
 int tmatch(char* type,vec* tokens,int* p){return strcmp(type,fetch(tokens,p)->type)==0;}
@@ -568,7 +511,6 @@ int main(int argc, char** argv)
 {
  USAGE(argv[0],argc < 2);
  int debug = 0;
- if (argc >= 3 && (strcmp(argv[2],"-d") == 0 || strcmp(argv[2],"--debug") == 0)) { debug = 1; }
  FILE* fp = fopen(argv[1],"r");
  USAGE(argv[0],fp == NULL);
  fseek(fp,0,SEEK_END);
@@ -579,16 +521,15 @@ int main(int argc, char** argv)
  fclose(fp);
  buf[len] = 0;
  vec* tokens = tokenize(buf);
- for (int i=0;i<tokens->len;i++)
- {
-  token* t = (token*)(vecget(tokens,i));
-  if (debug)
+#if __DEBUG__
+  for (int i=0;i<tokens->len;i++)
   {
-   printf("Token: `%s`,`%s`.\n",t->type,t->lexeme);
+   token* t = (token*)(vecget(tokens,i));
+    printf("Token: `%s`,`%s`.\n",t->type,t->lexeme);
   }
- }
+#endif
  n_prog* n = parse(tokens);
- for (int i=0;i<tokens->len;i++) { tokfree((token*)(vecget(tokens,i))); }
+ for (int i=0;i<tokens->len;i++) { tokfree((token*)vecget(tokens,i)); }
  vecfree(tokens);
  free(buf);
  return 0;
