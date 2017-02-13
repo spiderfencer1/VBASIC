@@ -215,14 +215,6 @@ typedef struct{node_type ntype;n_binary* cond;n_block* body;}             n_whil
 typedef struct{node_type ntype;n_binary* rval;}                           n_print;
 typedef struct{node_type ntype;char* name;}                               n_input;
 
-void iprintf(int i,const char* fmt,...){
- for(int j=0;j<i;i++){printf(" ");}
- va_list args;
- va_start(args,fmt);
- vprintf(fmt,args);
- va_end(args);
-}
-
 token* fetch(vec* tokens,int* p){return(*p<tokens->len)?(token*)vecget(tokens,*p):newtok("eof","eof");}
 int tmatch(char* type,vec* tokens,int* p){return strcmp(type,fetch(tokens,p)->type)==0;}
 int lmatch(char* lexeme,vec* tokens,int* p){return strcmp(lexeme,fetch(tokens,p)->lexeme)==0;}
@@ -240,8 +232,6 @@ void lexpectm(char* lexeme,vec* tokens,int* p){
  lexpect(lexeme,tokens,p);
  (*p)++;
 }
-
-// assignment | return | declaration | if | while | print | input
 
 n_binary* parse_binary(vec*,int*);
 
@@ -295,7 +285,7 @@ n_call* parse_call(vec* tokens,int* p){
  texpectm("newline",tokens,p);
  return c;
 }
-n_node* parse_term(vec* tokens,int* p){
+n_node* parse_factor(vec* tokens,int* p){
  if     (tmatch("num",tokens,p)){
   n_const* n = malloc(sizeof(n_const));
   n->ntype = N_CONST;
@@ -312,6 +302,20 @@ n_node* parse_term(vec* tokens,int* p){
   return(n_node*)parse_var(tokens,p);
  }
  error("Cannot parse node:{`%s`,`%s`}.",fetch(tokens,p)->type,fetch(tokens,p)->lexeme);
+}
+
+n_binary* parse_term(vec* tokens,int* p){
+ n_binary* b=malloc(sizeof(n_binary));
+ b->values=newvec();
+ b->ops=newvec();
+ vecadd(b->values,parse_factor(tokens,p));
+ while(lmatch("*",tokens,p)||lmatch("/",tokens,p)){
+  char* op=malloc(strlen(fetch(tokens,p)->lexeme)+1);
+  vecadd(b->ops,strcat(strcpy(op,fetch(tokens,p)->lexeme),"\0"));
+  (*p)++;
+  vecadd(b->values,parse_factor(tokens,p));
+ }
+ return b;
 }
 
 n_binary* parse_comp(vec* tokens,int* p){
