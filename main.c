@@ -198,18 +198,18 @@ typedef enum{
 
 typedef struct{node_type ntype;}                                          n_node;
 typedef struct{node_type ntype;vec* body;}                                n_prog;
-typedef struct{node_type ntype;vec* values,*ops;}                         n_binary; // done.
-typedef struct{node_type ntype;long val;}                                 n_const; // done.
-typedef struct{node_type ntype;char* name;}                               n_var; // done.
-typedef struct{node_type ntype;n_binary* rval;}                           n_neg; // done.
-typedef struct{node_type ntype;char* name;vec* args;}                     n_call; // done.
-typedef struct{node_type ntype;vec* body;}                                n_block; // done.
-typedef struct{node_type ntype;char* name,*type;vec* args;n_block* body;} n_func; // done.
-typedef struct{node_type ntype;char* name,*type;}                         n_arg; // done.
-typedef struct{node_type ntype;char* name;n_binary* rval;}                n_assign; // done.
-typedef struct{node_type ntype;n_binary* rval;}                           n_return; // done.
-typedef struct{node_type ntype;char* name,*type;}                         n_decl; // done.
-typedef struct{node_type ntype;n_binary* cond;n_block* body;}             n_ifs; // done.
+typedef struct{node_type ntype;vec* values,*ops;}                         n_binary;
+typedef struct{node_type ntype;long val;}                                 n_const;
+typedef struct{node_type ntype;char* name;}                               n_var;
+typedef struct{node_type ntype;n_binary* rval;}                           n_neg;
+typedef struct{node_type ntype;char* name;vec* args;}                     n_call;
+typedef struct{node_type ntype;vec* body;}                                n_block;
+typedef struct{node_type ntype;char* name,*type;vec* args;n_block* body;} n_func;
+typedef struct{node_type ntype;char* name,*type;}                         n_arg;
+typedef struct{node_type ntype;char* name;n_binary* rval;}                n_assign;
+typedef struct{node_type ntype;n_binary* rval;}                           n_return;
+typedef struct{node_type ntype;char* name,*type;}                         n_decl;
+typedef struct{node_type ntype;n_binary* cond;n_block* body;}             n_ifs;
 typedef struct{node_type ntype;n_binary* cond;n_block* t,*f;}             n_ife;
 typedef struct{node_type ntype;n_binary* cond;n_block* body;}             n_while;
 typedef struct{node_type ntype;n_binary* rval;}                           n_print;
