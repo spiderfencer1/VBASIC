@@ -296,7 +296,14 @@ n_call* parse_call(vec* tokens,int* p){
  return c;
 }
 n_node* parse_term(vec* tokens,int* p){
- if     (lmatch("(",tokens,p)){return (n_node*)parse_parens(tokens,p);} 
+ if     (tmatch("num",tokens,p)){
+  n_const* n = malloc(sizeof(n_const));
+  n->ntype = N_CONST;
+  n->val = atol(fetch(tokens,p)->lexeme);
+  (*p)++;
+  return (n_node*)n;
+ }
+ else if(lmatch("(",tokens,p)){return (n_node*)parse_parens(tokens,p);} 
  else if(lmatch("-",tokens,p)){return (n_node*)parse_neg(tokens,p);}
  else if(tmatch("var",tokens,p)){
   if(*p+1<tokens->len&&strcmp(((token*)vecget(tokens,*p+1))->lexeme,"(")==0){
@@ -356,6 +363,7 @@ n_assign* parse_let(vec* tokens,int* p){
 n_return* parse_return(vec* tokens,int* p){
  n_return* r=malloc(sizeof(n_return));
  r->ntype=N_RETURN;
+ (*p)++;
  r->rval=parse_binary(tokens,p);
  texpectm("newline",tokens,p);
  return r;
@@ -431,8 +439,10 @@ n_input* parse_input(vec* tokens,int* p){
  n_input* i=malloc(sizeof(n_input));
  i->ntype=N_INPUT;
  (*p)++;
+ texpect("var",tokens,p);
  i->name=malloc(strlen(fetch(tokens,p)->lexeme)+1);
  strcat(strcpy(i->name,fetch(tokens,p)->lexeme),"\0");
+ (*p)++;
  texpectm("newline",tokens,p);
  return i;
 }
@@ -450,7 +460,6 @@ n_block* parse_block(vec* tokens,int* p){
   else if(lmatch("Print",tokens,p)){vecadd(b->body,parse_print(tokens,p));}
   else if(lmatch("Input",tokens,p)){vecadd(b->body,parse_input(tokens,p));}
   else{break;}
- }
  return b;
 }
 
@@ -501,9 +510,42 @@ n_prog* parse(vec* tokens){
  n_prog* n=malloc(sizeof(n_prog));
  n->ntype=N_PROG;
  n->body=newvec();
- int pos,*p=&pos;
+ int pos=0,*p=&pos;
  while(*p<tokens->len){vecadd(n->body,parse_func(tokens,p));}
  return n;
+}
+
+typedef struct {
+ vec* keys,*data;
+ int len;
+} map;
+
+map* newmap(void){
+ map* m=malloc(sizeof(map));
+ m->keys=newvec();
+ m->data=newvec();
+ m->len=0;
+ return m;
+}
+
+void* mapget(map* m,char* key){
+ for(int i=0;i<m->keys->len;i++){
+  if(strcmp((char*)vecget(m->keys,i),key)==0){
+   return vecget(m->data,i);
+  }
+ }
+ return NULL;
+}
+
+void* mapset(map* m,char* key,void* val){
+ for(int i=0;i<m->keys->len;i++){
+  if(strcmp((char*)vecget(m->keys,i),key)==0){
+   return vecset(m->data,i,val);
+  }
+ }
+ m->len++;
+ vecadd(m->keys,key);
+ return vecadd(m->data,val);
 }
 
 #define USAGE(name,cond) if (cond) { fprintf(stderr,"\x1b[32mUsage: %s <filename>\x1b[0m\n",name); exit(-1); }
@@ -525,7 +567,7 @@ int main(int argc, char** argv)
   for (int i=0;i<tokens->len;i++)
   {
    token* t = (token*)(vecget(tokens,i));
-    printf("Token: `%s`,`%s`.\n",t->type,t->lexeme);
+   printf("Token: `%s`,`%s`.\n",t->type,t->lexeme);
   }
 #endif
  n_prog* n = parse(tokens);
