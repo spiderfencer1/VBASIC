@@ -1,4 +1,3 @@
-Function main(argc As Integer, argv0 As Integer) As Integer
- Input s
- Return 0
+Function main() As Integer
+ Print 1249353123456789
 End Function

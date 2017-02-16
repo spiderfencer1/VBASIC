@@ -7,12 +7,12 @@
 
 void error(const char* fmt, ...)
 {
- fprintf(stderr,"\x1b[31m");
+ printf("\x1b[31m");
  va_list args;
  va_start(args,fmt);
- vfprintf(stderr,fmt,args);
+ vprintf(fmt,args);
  va_end(args);
- fprintf(stderr,"\x1b[0m\n");
+ printf("\x1b[0m\n");
  exit(-1);
 }
 
@@ -110,7 +110,6 @@ vec* tokenize(char* buf)
    }
    num = realloc(num,i+1);
    num[i] = 0;
-   if (atoi(num) > INT32_MAX) { error("Integer to large %s.\n",num); }
    vecadd(tokens,newtok("num",num));
    free(num);
   }
@@ -215,6 +214,150 @@ typedef struct{node_type ntype;n_binary* cond;n_block* body;}             n_whil
 typedef struct{node_type ntype;n_binary* rval;}                           n_print;
 typedef struct{node_type ntype;char* name;}                               n_input;
 
+void iprintf(int i,const char* fmt,...){
+ for(int j=0;j<i;j++){printf(" ");}
+ va_list args;
+ va_start(args,fmt);
+ vprintf(fmt,args);
+ va_end(args);
+}
+
+void print_node(n_node* n,int depth) {
+ switch(n->ntype){
+  case N_PROG:
+   {
+    iprintf(depth,"n_prog\n");
+    n_prog* p=(n_prog*)n;
+    for(int i=0;i<p->body->len;i++){
+     print_node((n_node*)vecget(p->body,i),depth+1);
+    }
+   }
+  break;
+  case N_BINARY:
+   {
+    iprintf(depth,"n_binary\n");
+    n_binary* b=(n_binary*)n;
+    for(int i=0;i<b->values->len+b->ops->len;i++){
+     if(i%2==0){
+      print_node((n_node*)vecget(b->values,i),depth+1);
+     }else{
+      iprintf(depth+1,"%s",(char*)vecget(b->values,i));
+     }
+    }
+   }
+  break;
+  case N_CONST:
+   iprintf(depth,"n_const\n");
+   iprintf(depth+1,"%d\n",((n_const*)n)->val);
+  break;
+  case N_VAR:
+   iprintf(depth,"n_var\n");
+   iprintf(depth+1,"%s\n",((n_var*)n)->name);
+  break;
+  case N_NEG:
+   iprintf(depth,"n_neg\n");
+   print_node((n_node*)(((n_neg*)n)->rval),depth+1);
+  break;
+  case N_CALL:
+   {
+    iprintf(depth,"n_call\n");
+    n_call* c=(n_call*)n;
+    iprintf(depth+1,"%s\n",c->name);
+    for(int i=0;i<c->args->len;i++){
+     print_node((n_node*)vecget(c->args,i),depth+1);
+    }
+   }
+  break;
+  case N_BLOCK:
+   {
+    iprintf(depth,"n_block\n");
+    n_block* b=(n_block*)n;
+    for(int i=0;i<b->body->len;i++){
+     print_node((n_node*)vecget(b->body,i),depth+1);
+    }
+   }
+  break;
+  case N_FUNC:
+   {
+    iprintf(depth,"n_func\n");
+    n_func* f=(n_func*)n;
+    iprintf(depth+1,"%s\n",f->name);
+    iprintf(depth+1,"%s\n",f->type);
+    for(int i=0;i<f->args->len;i++) {
+     print_node((n_node*)vecget(f->args,i),depth+1);
+    }
+    print_node((n_node*)f->body,depth+1);
+   }
+  break;
+  case N_ARG:
+   {
+    iprintf(depth,"n_arg\n");
+    n_arg* a=(n_arg*)n;
+    iprintf(depth+1,"%s\n",a->name);
+    iprintf(depth+1,"%s\n",a->type);
+   }
+  break;
+  case N_ASSIGN:
+   {
+    iprintf(depth,"n_assign\n");
+    n_assign* a=(n_assign*)n;
+    iprintf(depth+1,"%s\n",a->name);
+    print_node((n_node*)a->rval,depth+1);
+   }
+  break;
+  case N_RETURN:
+   {
+    iprintf(depth,"n_return\n");
+    n_return* r=(n_return*)n;
+    print_node((n_node*)r->rval,depth+1);
+   }
+  break;
+  case N_DECL:
+   {
+    iprintf(depth,"n_decl\n");
+    n_decl* d=(n_decl*)n;
+    iprintf(depth+1,"%s\n",d->name);
+    iprintf(depth+1,"%s\n",d->type);
+   }
+  break;
+  case N_IFS:
+   {
+    iprintf(depth,"n_ifs\n");
+    n_ifs* i=(n_ifs*)n;
+    print_node((n_node*)i->cond,depth+1);
+    print_node((n_node*)i->body,depth+1);
+   }
+  break;
+  case N_IFE:
+   {
+    iprintf(depth,"n_ife\n");
+    n_ife* i=(n_ife*)n;
+    print_node((n_node*)i->cond,depth+1);
+    print_node((n_node*)i->t,depth+1);
+    print_node((n_node*)i->f,depth+1);
+   }
+  break;
+  case N_WHILE:
+   {
+    iprintf(depth,"n_while\n");
+    n_while* w=(n_while*)n;
+    print_node((n_node*)w->cond,depth+1);
+    print_node((n_node*)w->body,depth+1);
+   }
+  break;
+  case N_PRINT:
+   iprintf(depth,"n_print\n");
+   print_node((n_node*)(((n_print*)n)->rval),depth+1);
+  break;
+  case N_INPUT:
+   iprintf(depth,"n_input\n");
+   iprintf(depth+1,"%s\n",((n_input*)n)->name);
+  break;
+  default:
+  break;
+ }
+}
+
 token* fetch(vec* tokens,int* p){return(*p<tokens->len)?(token*)vecget(tokens,*p):newtok("eof","eof");}
 int tmatch(char* type,vec* tokens,int* p){return strcmp(type,fetch(tokens,p)->type)==0;}
 int lmatch(char* lexeme,vec* tokens,int* p){return strcmp(lexeme,fetch(tokens,p)->lexeme)==0;}
@@ -306,6 +449,7 @@ n_node* parse_factor(vec* tokens,int* p){
 
 n_binary* parse_term(vec* tokens,int* p){
  n_binary* b=malloc(sizeof(n_binary));
+ b->ntype = N_BINARY;
  b->values=newvec();
  b->ops=newvec();
  vecadd(b->values,parse_factor(tokens,p));
@@ -320,6 +464,7 @@ n_binary* parse_term(vec* tokens,int* p){
 
 n_binary* parse_comp(vec* tokens,int* p){
  n_binary* b=malloc(sizeof(n_binary));
+ b->ntype = N_BINARY;
  b->values=newvec();
  b->ops=newvec();
  vecadd(b->values,parse_term(tokens,p));
@@ -334,6 +479,7 @@ n_binary* parse_comp(vec* tokens,int* p){
 
 n_binary* parse_binary(vec* tokens,int* p){
  n_binary* b=malloc(sizeof(n_binary));
+ b->ntype = N_BINARY;
  b->values=newvec();
  b->ops=newvec();
  vecadd(b->values,parse_comp(tokens,p));
@@ -464,6 +610,7 @@ n_block* parse_block(vec* tokens,int* p){
   else if(lmatch("Print",tokens,p)){vecadd(b->body,parse_print(tokens,p));}
   else if(lmatch("Input",tokens,p)){vecadd(b->body,parse_input(tokens,p));}
   else{break;}
+ }
  return b;
 }
 
@@ -552,7 +699,7 @@ void* mapset(map* m,char* key,void* val){
  return vecadd(m->data,val);
 }
 
-#define USAGE(name,cond) if (cond) { fprintf(stderr,"\x1b[32mUsage: %s <filename>\x1b[0m\n",name); exit(-1); }
+#define USAGE(name,cond) if (cond) { error("\x1b[32mUsage: %s <filename>\x1b[0m\n",name); exit(-1); }
 int main(int argc, char** argv)
 {
  USAGE(argv[0],argc < 2);
@@ -567,14 +714,8 @@ int main(int argc, char** argv)
  fclose(fp);
  buf[len] = 0;
  vec* tokens = tokenize(buf);
-#if __DEBUG__
-  for (int i=0;i<tokens->len;i++)
-  {
-   token* t = (token*)(vecget(tokens,i));
-   printf("Token: `%s`,`%s`.\n",t->type,t->lexeme);
-  }
-#endif
  n_prog* n = parse(tokens);
+ print_node((n_node*)n,0);
  for (int i=0;i<tokens->len;i++) { tokfree((token*)vecget(tokens,i)); }
  vecfree(tokens);
  free(buf);
