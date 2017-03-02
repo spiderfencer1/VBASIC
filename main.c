@@ -3,7 +3,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#define __DEBUG__ 0
 
 void error(const char* fmt, ...)
 {
@@ -150,17 +149,16 @@ vec* tokenize(char* buf)
     case ')':
      vecadd(tokens,newtok("rparen",")"));
      break;
-    case '=':
-     if (pos+1 < strlen(buf) && buf[pos+1] == '=') { pos++; vecadd(tokens,newtok("comp","==")); break; }
-     vecadd(tokens,newtok("assign","="));
-     break;
     case '<':
-     if (pos+1 < strlen(buf) && buf[pos+1] == '=') { pos++; vecadd(tokens,newtok("lte","<=")); break; }
+     if (pos < strlen(buf) && buf[pos] == '=') { pos++; vecadd(tokens,newtok("lte","<=")); break; }
      vecadd(tokens,newtok("ltn","<"));
      break;
     case '>':
-     if (pos+1 < strlen(buf) && buf[pos+1] == '=') { pos++; vecadd(tokens,newtok("gte",">=")); break; }
+     if (pos < strlen(buf) && buf[pos] == '=') { pos++; vecadd(tokens,newtok("gte",">=")); break; }
      vecadd(tokens,newtok("gtn",">"));
+     break;
+    case '=':
+     vecadd(tokens,newtok("equal","="));
      break;
     case ',':
      vecadd(tokens,newtok("comma",","));
@@ -199,19 +197,19 @@ typedef struct{node_type ntype;}                                          n_node
 typedef struct{node_type ntype;vec* body;}                                n_prog;
 typedef struct{node_type ntype;vec* values,*ops;}                         n_binary;
 typedef struct{node_type ntype;long val;}                                 n_const;
-typedef struct{node_type ntype;char* name;}                               n_var;
-typedef struct{node_type ntype;n_binary* rval;}                           n_neg;
+typedef struct{node_type ntype;char* name;int index;}                     n_var;
+typedef struct{node_type ntype;n_node* rval;}                             n_neg;
 typedef struct{node_type ntype;char* name;vec* args;}                     n_call;
 typedef struct{node_type ntype;vec* body;}                                n_block;
 typedef struct{node_type ntype;char* name,*type;vec* args;n_block* body;} n_func;
 typedef struct{node_type ntype;char* name,*type;}                         n_arg;
-typedef struct{node_type ntype;char* name;n_binary* rval;}                n_assign;
-typedef struct{node_type ntype;n_binary* rval;}                           n_return;
+typedef struct{node_type ntype;char* name;n_node* rval;}                  n_assign;
+typedef struct{node_type ntype;n_node* rval;}                             n_return;
 typedef struct{node_type ntype;char* name,*type;}                         n_decl;
-typedef struct{node_type ntype;n_binary* cond;n_block* body;}             n_ifs;
-typedef struct{node_type ntype;n_binary* cond;n_block* t,*f;}             n_ife;
-typedef struct{node_type ntype;n_binary* cond;n_block* body;}             n_while;
-typedef struct{node_type ntype;n_binary* rval;}                           n_print;
+typedef struct{node_type ntype;n_node* cond;n_block* body;}               n_ifs;
+typedef struct{node_type ntype;n_node* cond;n_block* t,*f;}               n_ife;
+typedef struct{node_type ntype;n_node* cond;n_block* body;}               n_while;
+typedef struct{node_type ntype;n_node* rval;}                             n_print;
 typedef struct{node_type ntype;char* name;}                               n_input;
 
 void iprintf(int i,const char* fmt,...){
@@ -376,11 +374,11 @@ void lexpectm(char* lexeme,vec* tokens,int* p){
  (*p)++;
 }
 
-n_binary* parse_binary(vec*,int*);
+n_node* parse_binary(vec*,int*);
 
-n_binary* parse_parens(vec* tokens,int* p){
+n_node* parse_parens(vec* tokens,int* p){
  (*p)++;
- n_binary* b=parse_binary(tokens,p);
+ n_node* b=parse_binary(tokens,p);
  lexpectm(")",tokens,p);
  return b;
 }
@@ -415,17 +413,17 @@ n_call* parse_call(vec* tokens,int* p){
  c->ntype=N_CALL;
  c->name=malloc(strlen(fetch(tokens,p)->lexeme)+1);
  strcat(strcpy(c->name,fetch(tokens,p)->lexeme),"\0");
+ (*p)++;
  lexpectm("(",tokens,p);
  c->args=newvec();
- if(!lmatch(")",tokens,p)){
+ if(lmatch(")",tokens,p)){(*p)++;}
+ else{
   while(1){
    vecadd(c->args,parse_binary(tokens,p));
-   if(lmatch(")",tokens,p)){break;}
+   if(lmatch(")",tokens,p)){(*p)++;break;}
    lexpectm(",",tokens,p);
   }
  }
- (*p)++;
- texpectm("newline",tokens,p);
  return c;
 }
 n_node* parse_factor(vec* tokens,int* p){
@@ -447,7 +445,7 @@ n_node* parse_factor(vec* tokens,int* p){
  error("Cannot parse node:{`%s`,`%s`}.",fetch(tokens,p)->type,fetch(tokens,p)->lexeme);
 }
 
-n_binary* parse_term(vec* tokens,int* p){
+n_node* parse_term(vec* tokens,int* p){
  n_binary* b=malloc(sizeof(n_binary));
  b->ntype = N_BINARY;
  b->values=newvec();
@@ -459,25 +457,27 @@ n_binary* parse_term(vec* tokens,int* p){
   (*p)++;
   vecadd(b->values,parse_factor(tokens,p));
  }
- return b;
+ if(b->values->len == 1) { return (n_node*)vecget(b->values,0); }
+ return (n_node*)b;
 }
 
-n_binary* parse_comp(vec* tokens,int* p){
+n_node* parse_comp(vec* tokens,int* p){
  n_binary* b=malloc(sizeof(n_binary));
  b->ntype = N_BINARY;
  b->values=newvec();
  b->ops=newvec();
  vecadd(b->values,parse_term(tokens,p));
- while(lmatch("*",tokens,p)||lmatch("/",tokens,p)){
+ while(lmatch("+",tokens,p)||lmatch("-",tokens,p)){
   char* op=malloc(strlen(fetch(tokens,p)->lexeme)+1);
   vecadd(b->ops,strcat(strcpy(op,fetch(tokens,p)->lexeme),"\0"));
   (*p)++;
   vecadd(b->values,parse_term(tokens,p));
  }
- return b;
+ if(b->values->len == 1) { return (n_node*)vecget(b->values,0); }
+ return (n_node*)b;
 }
 
-n_binary* parse_binary(vec* tokens,int* p){
+n_node* parse_binary(vec* tokens,int* p){
  n_binary* b=malloc(sizeof(n_binary));
  b->ntype = N_BINARY;
  b->values=newvec();
@@ -491,7 +491,8 @@ n_binary* parse_binary(vec* tokens,int* p){
   (*p)++;
   vecadd(b->values,parse_comp(tokens,p));
  }
- return b;
+ if(b->values->len == 1) { return (n_node*)vecget(b->values,0); }
+ return (n_node*)b;
 }
 
 n_block* parse_block(vec* tokens,int* p);
@@ -699,25 +700,242 @@ void* mapset(map* m,char* key,void* val){
  return vecadd(m->data,val);
 }
 
+typedef struct{
+ char* name,*type;
+ int idx;
+}fnvar;
+
+typedef struct{
+ char* name;
+ vec* args; // vec<fnvar*> 
+ vec* vars; // vec<fnvar*>
+}fntempl;
+
+vec* make_function_vec(n_prog* n){
+ vec* v = newvec();
+ for(int i=0;i<n->body->len;i++){
+  n_func* f=(n_func*)vecget(n->body,i);
+  fntempl* ft=malloc(sizeof(fntempl));
+  ft->name = f->name;
+  ft->args = newvec();
+  for(int i=0;i<f->args->len;i++)
+  {
+   n_arg* a=(n_arg*)vecget(f->args,i);
+   fnvar* fv=malloc(sizeof(fnvar));
+   strcat(strcpy((fv->type = malloc(strlen(a->type)+1)),a->type),"\0");
+   strcat(strcpy((fv->name = malloc(strlen(a->name)+1)),a->name),"\0");
+   fv->idx = i;
+   vecadd(ft->args,fv);
+  }
+  ft->vars = newvec();
+  for(int i=0;i<f->body->body->len;i++)
+  {
+   n_node* n=(n_node*)vecget(f->body->body,i);
+   if(n->ntype!=N_DECL){continue;}
+   n_decl* d=(n_decl*)n;
+   fnvar* fv=malloc(sizeof(fnvar));
+   strcat(strcpy((fv->type = malloc(strlen(d->type)+1)),d->type),"\0");
+   strcat(strcpy((fv->name = malloc(strlen(d->name)+1)),d->name),"\0");
+   fv->idx = i;
+   vecadd(ft->vars,fv);
+  }
+  vecadd(v,ft);
+ }
+ return v;
+}
+
+typedef struct
+{
+ int debug_file;
+ int debug_lexer;
+ int debug_parser;
+ int repl;
+ vec* pre; // vec<char*>
+ vec* filenames; // vec<char*>
+} opts;
+
+opts* parse_opts(int argc, char** argv)
+{
+ opts* o = malloc(sizeof(opts));
+ o->debug_file = 0;
+ o->debug_lexer = 0;
+ o->debug_parser = 0;
+ o->repl = 0;
+ o->pre = newvec();
+ o->filenames = newvec();
+ for(int i=1;i<argc;i++)
+ {
+  if(strcmp(argv[i],"-dfile") == 0) { o->debug_file = 1; }
+  else if(strcmp(argv[i],"-dlex") == 0
+       || strcmp(argv[i],"-dlexer") == 0) { o->debug_lexer = 1; }
+  else if(strcmp(argv[i],"-dparse") == 0
+       || strcmp(argv[i],"-dparser") == 0) { o->debug_parser = 1; }
+  else if(strcmp(argv[i],"-exec") == 0)
+  {
+   vecadd(o->pre,argv[++i]);
+  }
+  else if(strcmp(argv[i],"-i") == 0
+       || strcmp(argv[i],"-repl") == 0) { o->repl = 1; }
+  else
+  {
+   vecadd(o->filenames,argv[i]);
+  }
+ }
+ return o;
+}
+
+void generate_block(n_block* n)
+{
+ for(int i=0;i<n->body->len;i++)
+ {
+  n_node* stmt=(n_node*)vecget(n->body,i);
+  switch(stmt->ntype)
+  {
+   case N_LET:
+    generate_let((n_assign*)stmt);
+   break;
+   case N_RETURN:
+    generate_return((n_return*)stmt);
+   break;
+   case N_DIM:
+   break;
+   case N_IF:
+    generate_if((n_return*)stmt);
+   break;
+   case N_WHILE:
+    generate_while((n_while*)stmt);
+   break;
+   case N_PRINT:
+    generate_print((n_print*)stmt);
+   break;
+   case N_INPUT:
+    generate_input((n_input*)stmt);
+   break;
+   default:
+    error("Unknown case. %d\n",stmt->ntype);
+   break;
+  }
+ }
+  /*
+  if     (lmatch("Let",tokens,p)){vecadd(b->body,parse_let(tokens,p));}
+  else if(lmatch("Return",tokens,p)){vecadd(b->body,parse_return(tokens,p));}
+  else if(lmatch("Dim",tokens,p)){vecadd(b->body,parse_decl(tokens,p));}
+  else if(lmatch("If",tokens,p)){vecadd(b->body,parse_if(tokens,p));}
+  else if(lmatch("Do",tokens,p)){vecadd(b->body,parse_while(tokens,p));}
+  else if(lmatch("Print",tokens,p)){vecadd(b->body,parse_print(tokens,p));}
+  else if(lmatch("Input",tokens,p)){vecadd(b->body,parse_input(tokens,p));}
+  */
+}
+
+void generate_funct(fntempl* f,n_func* nf)
+{
+ printf("fun_%s:\n",f->name);
+ printf(" enter 0,0\n");
+ printf(" and esp,0xfffffff0\n");
+ printf(" sub esp,%d\n",4*f->vars->len);
+ generate_block(nf->body);
+ printf(" leave\n");
+ printf(" ret\n");
+}
+
+void generate(n_prog* n,vec* fncs)
+{
+ printf("global _main\n"
+ "\n"
+ "extern _scanf\n"
+ "extern _printf\n"
+ "\n"
+ "\n"
+ "section .data\n"
+ "\n"
+ "    pattern: db \"%%d\",0\n"
+ "    message: db \"%%d\",10,0\n"
+ "\n"
+ "\n"
+ "section .text\n"
+ "\n"
+ "_main:\n"
+ "    jmp fun_Main\n");
+ for(int i=0;i<fncs->len;i++)
+ {
+  fntempl* f = (fntempl*)vecget(fncs,i);
+  n_func* nf=(n_func*)vecget(n->body,i);
+  generate_funct(f,nf);
+ }
+}
+
+void exec(char* buf,opts* o)
+{
+ vec* tokens = tokenize(buf);
+ if(o->debug_lexer)
+ {
+  for(int i=0;i<tokens->len;i++) {
+   token* t=(token*)vecget(tokens,i);
+   printf("\x1b[32m{`%s`,`%s`}\x1b[0m\n",t->type,t->lexeme);
+  }
+ }
+ n_prog* n = parse(tokens);
+ if(o->debug_parser)
+ {
+  printf("\x1b[32m");
+  print_node((n_node*)n,0);
+  printf("\x1b[0m");
+ }
+ vec* functions = make_function_vec(n);
+ generate(n,functions);
+ for (int i=0;i<tokens->len;i++) { tokfree((token*)vecget(tokens,i)); }
+ vecfree(tokens);
+}
+
 #define USAGE(name,cond) if (cond) { error("\x1b[32mUsage: %s <filename>\x1b[0m\n",name); exit(-1); }
 int main(int argc, char** argv)
 {
  USAGE(argv[0],argc < 2);
  int debug = 0;
- FILE* fp = fopen(argv[1],"r");
- USAGE(argv[0],fp == NULL);
- fseek(fp,0,SEEK_END);
- long len = ftell(fp);
- fseek(fp,0,SEEK_SET);
- char* buf = malloc(len+1);
- fread(buf,1,len,fp);
- fclose(fp);
- buf[len] = 0;
- vec* tokens = tokenize(buf);
- n_prog* n = parse(tokens);
- print_node((n_node*)n,0);
- for (int i=0;i<tokens->len;i++) { tokfree((token*)vecget(tokens,i)); }
- vecfree(tokens);
- free(buf);
+ opts* o = parse_opts(argc,argv);
+ if(o->repl)
+ {
+  while(1)
+  {
+   printf("≈> ");
+   char* line = malloc(0);
+   int c,i = 1;
+   while((c = getchar()) != '\n') { line = realloc(line,i); line[i-1] = c; i++; }
+   exec(line,o);
+   free(line);
+  }
+ }
+ else
+ {
+  USAGE(argv[0],o->filenames->len + o->pre->len < 1);
+  char* buf = malloc(0);
+  long len = 0;
+  for(int i=0;i<o->pre->len;i++)
+  {
+   char* text = (char*)vecget(o->pre,i);
+   long i = len;
+   len += strlen(text);
+   buf = realloc(buf,len);
+   strncpy(&buf[i],text,strlen(text));
+  }
+  for(int i=0;i<o->filenames->len;i++)
+  {
+   char* fl = (char*)vecget(o->filenames,i);
+   FILE* fp = fopen(fl,"r");
+   USAGE(argv[0],fp == NULL);
+   fseek(fp,0,SEEK_END);
+   long llen = ftell(fp);
+   fseek(fp,0,SEEK_SET);
+   long i = len;
+   len += llen;
+   buf = realloc(buf,len);
+   fread(&buf[i],1,llen,fp);
+   fclose(fp);
+  }
+  buf[len] = 0;
+  if(o->debug_file) { printf("\x1b[32m%s\x1b[0m\n",buf); }
+  exec(buf,o);
+  free(buf);
+ }
  return 0;
 }
