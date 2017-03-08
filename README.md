@@ -6,4 +6,5 @@ If you wish to experiment with this yourself run these commands in a terminal
 
 ```bash
 make
+./basicc test.bas
 ```
