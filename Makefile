@@ -2,7 +2,13 @@ CFLAGS=std=c99
 OUT=basicc
 
 all:
-	gcc -$(CFLAGS) *.c -o $(OUT)
+	gcc -$(CFLAGS) -o $(OUT) src/*.c
+
+clean:
+	rm -rf $(OUT)
+
+pre:
+	gcc -$(CFLAGS) -E src/*.c 
 
 test:
 	$(MAKE) all
