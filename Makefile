@@ -5,7 +5,12 @@ all:
 	gcc -$(CFLAGS) -o $(OUT) src/*.c
 
 clean:
-	rm -rf $(OUT)
+	rm -rf $(OUT) a.s
+
+c:
+	$(MAKE) all
+	clear
+	./$(OUT) test.bas >> a.s
 
 pre:
 	gcc -$(CFLAGS) -E src/*.c 

@@ -7,32 +7,38 @@
 
 void generate_let(n_assign* a)
 {
- printf("; assignment.\npop eax\n");
+ printf(" ; assignment.\n");
+ printf(" pop eax\n");
 }
 
 void generate_return(n_return* r)
 {
- printf("; return statement.\npop eax\nleave\nret\n"); 
+ printf(" ; return statement.\n"); 
+ printf(" pop eax\n");
+ printf(" leave\n");
+ printf(" ret\n");
 }
 
 void generate_if(n_ifs* i)
 {
- printf("; if statement.\n");
+ printf(" ; if statement.\n");
 }
 
 void generate_while(n_while* w)
 {
- printf("; while statement.\n");
+ printf(" ; while statement.\n");
 }
 
 void generate_print(n_print* p)
 {
- printf("; print statement.\n");
+ printf(" ; print statement.\n");
+ printf(" mov eax,1\n");
+ printf(" sub esp,8\n");
 }
 
 void generate_input(n_input* i)
 {
- printf("; input statement.\n");
+ printf(" ; input statement.\n");
 }
 
 void generate_block(n_block* n)
@@ -76,28 +82,24 @@ void generate_funct(fntempl* f,n_func* nf)
  printf(" and esp,0xfffffff0\n");
  printf(" sub esp,%d\n",4*f->vars->len);
  generate_block(nf->body);
- printf(" leave\n");
- printf(" ret\n");
 }
 
 void generate(n_prog* n,vec* fncs)
 {
  printf("global _main\n"
- "\n"
+ "section .data\n"
+ " stdin: db \"%%d\",0\n"
+ " stdout: db \"%%d\",0\n"
+ "section .bss\n"
+ " input: resd 1\n"
  "extern _scanf\n"
  "extern _printf\n"
- "\n"
- "\n"
  "section .data\n"
- "\n"
- "    pattern: db \"%%d\",0\n"
- "    message: db \"%%d\",10,0\n"
- "\n"
- "\n"
+ " pattern: db \"%%d\",0\n"
+ " message: db \"%%d\",10,0\n"
  "section .text\n"
- "\n"
  "_main:\n"
- "    jmp fun_Main\n");
+ " jmp fun_Main\n");
  for(int i=0;i<fncs->len;i++)
  {
   fntempl* f = (fntempl*)vecget(fncs,i);
