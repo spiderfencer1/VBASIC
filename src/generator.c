@@ -7,16 +7,17 @@
 
 void generate_let(n_assign* a)
 {
- printf(" ; assignment.\n");
- printf(" pop eax\n");
+ printf(" ; assignment.\n"
+ " pop eax\n");
 }
 
 void generate_return(n_return* r)
 {
- printf(" ; return statement.\n"); 
- printf(" pop eax\n");
- printf(" leave\n");
- printf(" ret\n");
+ printf(" ; return statement.\n" 
+ " pop eax\n"
+ " leave\n"
+ " ret\n"
+ );
 }
 
 void generate_if(n_ifs* i)
@@ -31,14 +32,20 @@ void generate_while(n_while* w)
 
 void generate_print(n_print* p)
 {
- printf(" ; print statement.\n");
- printf(" mov eax,1\n");
- printf(" sub esp,8\n");
+ printf(" ; print statement.\n"
+ " mov eax,1\n"
+ " sub esp,8\n"
+ " push ebx\n"
+ " push stdout\n"
+ " call _printf\n"
+ " add esp,16\n"
+ );
 }
 
 void generate_input(n_input* i)
 {
- printf(" ; input statement.\n");
+ printf(" ; input statement.\n"
+ );
 }
 
 void generate_block(n_block* n)
@@ -78,9 +85,10 @@ void generate_block(n_block* n)
 void generate_funct(fntempl* f,n_func* nf)
 {
  printf("fun_%s:\n",f->name);
- printf(" enter 0,0\n");
- printf(" and esp,0xfffffff0\n");
- printf(" sub esp,%d\n",4*f->vars->len);
+ printf(" enter 0,0\n"
+ " and esp,0xfffffff0\n"
+ " sub esp,%d\n",4*f->vars->len
+ );
  generate_block(nf->body);
 }
 
