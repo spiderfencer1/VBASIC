@@ -6,4 +6,4 @@ all:
 	$(CC) src/*.c -$(CFLAGS) $(OUT)
 
 clean:
-	/bin/rm -rf a.* *.o
+	/bin/rm -rf a.* *.o basicc
