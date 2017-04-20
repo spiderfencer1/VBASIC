@@ -237,6 +237,7 @@ n_node* parse_factor(vec* tokens,int* p){
   return(n_node*)parse_var(tokens,p);
  }
  error("Cannot parse node:{`%s`,`%s`}.",fetch(tokens,p)->type,fetch(tokens,p)->lexeme);
+ return NULL;
 }
 
 n_node* parse_term(vec* tokens,int* p){
