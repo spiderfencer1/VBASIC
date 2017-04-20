@@ -1,0 +1,2 @@
+#!/bin/bash
+/Applications/nasm/nasm -f macho32 $1.s -o $1.o && ld -arch i386 -no_pie -lSystem -macosx_version_min 10.10 $1.o
