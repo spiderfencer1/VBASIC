@@ -1,5 +1,5 @@
-#ifndef __ERROR_H
-#define __ERROR_H
+#ifndef _ERROR_H
+#define _ERROR_H
 
 void error(const char* fmt,...);
 

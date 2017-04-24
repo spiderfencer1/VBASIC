@@ -1,5 +1,5 @@
-#ifndef __VEC_H
-#define __VEC_H
+#ifndef _VEC_H
+#define _VEC_H
 
 typedef struct
 {

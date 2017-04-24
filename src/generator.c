@@ -64,6 +64,12 @@ void generate_bin(n_binary* b)
  }
 }
 
+void generate_value(n_node* n){
+ if(n->ntype == N_CONST){generate_const((n_const*)n);}
+ else if(n->ntype == N_BINARY){generate_bin((n_binary*)n);}
+ else if(n->ntype == N_VAR){generate_var((n_var*)n)}
+}
+
 void generate_let(n_assign* a)
 {
  printf(" ; assignment.\n"
@@ -96,26 +102,25 @@ void generate_while(n_while* w)
  );
 }
 
-void generate_print(n_print* p)
-{
+void generate_print(n_print* p){
  if(p->rval->ntype == N_BINARY){
   generate_bin((n_binary*)p->rval);
  }else if(p->rval->ntype == N_CONST){
   generate_const((n_const*)p->rval);
  }
  printf(" ; print statement.\n"
- "mov eax,[esp]\n"
- "mov ebx,esp\n"
- "and esp,0xfffffff0\n"
- "push ebx\n"
- "sub esp,4\n"
- "push eax\n"
- "push message\n"
- "mov eax,1\n"
- "call _printf\n"
- "add esp,12\n"
- "mov esp,[esp]\n"
- "add esp,4\n"
+ " mov eax,[esp]\n"
+ " mov ebx,esp\n"
+ " and esp,0xfffffff0\n"
+ " push ebx\n"
+ " sub esp,4\n"
+ " push eax\n"
+ " push message\n"
+ " mov eax,1\n"
+ " call _printf\n"
+ " add esp,12\n"
+ " mov esp,[esp]\n"
+ " add esp,4\n"
  );
 }
 

@@ -1,5 +1,5 @@
-#ifndef __GENERATOR_H
-#define __GENERATOR_H
+#ifndef _GENERATOR_H
+#define _GENERATOR_H
 
 #include "vec.h"
 #include "parser.h"
