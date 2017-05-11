@@ -4,7 +4,12 @@
 #include "../include/error.h"
 #include "../include/generator.h"
 #include "../include/parser.h"
+#include "../include/sym_table.h"
 #include "../include/vec.h"
+
+int if_stmt_count = 0;
+
+sym_table* st = newsymtable();
 
 void generate_const(n_const* c)
 {
@@ -72,8 +77,8 @@ void generate_value(n_node* n){
 
 void generate_let(n_assign* a)
 {
- printf(" ; assignment.\n"
- " pop eax\n");
+ printf(" ; assignment %s.\n",a->name);
+ symtableset(a,
 }
 
 void generate_return(n_return* r)
@@ -90,9 +95,16 @@ void generate_return(n_return* r)
 
 void generate_if(n_ifs* i)
 {
- printf(" ; if statement.\n"
+	if_stmt_count++;
+ printf(" ; if statement.\n");
+	generate_bin((n_binary*)i->cond);
+	printf("_if_stmt_true_%d: \n",if_stmt_count);
+	generate_block(i->body);
+	printf("_if_stmt_false_%d: \n",if_stmt_count);
+}
 
- );
+void generate_if_else(n_ife* i){
+	printf(" ; if-else statement.\n")
 }
 
 void generate_while(n_while* w)
@@ -154,6 +166,8 @@ void generate_block(n_block* n)
    case N_IFS:
     generate_if((n_ifs*)stmt);
    break;
+			case N_IFE:
+				generate_if_else((n_ife*)stmt);
    case N_WHILE:
     generate_while((n_while*)stmt);
    break;
