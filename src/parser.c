@@ -278,7 +278,7 @@ n_node* parse_binary(vec* tokens,int* p){
  b->values=newvec();
  b->ops=newvec();
  vecadd(b->values,parse_comp(tokens,p));
- while(lmatch("=",tokens,p) ||lmatch("<>",tokens,p)
+ while(lmatch("==",tokens,p)||lmatch("<>",tokens,p)
      ||lmatch("<=",tokens,p)||lmatch(">=",tokens,p)
      ||lmatch("<",tokens,p) ||lmatch(">",tokens,p)){
   char* op=malloc(strlen(fetch(tokens,p)->lexeme)+1);

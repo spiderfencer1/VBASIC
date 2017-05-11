@@ -9,8 +9,6 @@
 
 int if_stmt_count = 0;
 
-sym_table* st = newsymtable();
-
 void generate_const(n_const* c)
 {
  printf(" ; constant.\n");
@@ -62,6 +60,14 @@ void generate_bin(n_binary* b)
    printf(" add esp,4\n");
    printf(" mov [esp],eax\n");
   }
+		else if(strcmp(op,"==") == 0 || strcmp(op,">=") == 0 || strcmp(op,"<=") == 0 ||
+				strcmp(op,">") == 0 || strcmp(op,"<") == 0 || strcmp(op,"!=") == 0){
+			printf(
+			" pop ebx\n"
+			" pop eax\n"
+			" cmp eax,ebx\n"
+			);
+		}
   else
   {
    error("Unsupported operator: %s\n",op);
@@ -72,13 +78,12 @@ void generate_bin(n_binary* b)
 void generate_value(n_node* n){
  if(n->ntype == N_CONST){generate_const((n_const*)n);}
  else if(n->ntype == N_BINARY){generate_bin((n_binary*)n);}
- else if(n->ntype == N_VAR){generate_var((n_var*)n)}
+ else if(n->ntype == N_VAR){generate_var((n_var*)n);}
 }
 
 void generate_let(n_assign* a)
 {
  printf(" ; assignment %s.\n",a->name);
- symtableset(a,
 }
 
 void generate_return(n_return* r)
@@ -93,18 +98,35 @@ void generate_return(n_return* r)
  );
 }
 
-void generate_if(n_ifs* i)
-{
-	if_stmt_count++;
- printf(" ; if statement.\n");
-	generate_bin((n_binary*)i->cond);
-	printf("_if_stmt_true_%d: \n",if_stmt_count);
-	generate_block(i->body);
-	printf("_if_stmt_false_%d: \n",if_stmt_count);
+void generate_jump_cond(n_binary* cond,int label_no,char* label_type){
+	generate_bin(cond);	
+	char* op = vecget(cond->ops,0);
+	if(strcmp(op,"==") == 0){printf(" jne");}
+	else if(strcmp(op,"!=") == 0){printf(" je");}
+	else if(strcmp(op,"<") == 0){printf(" jge");}
+	else if(strcmp(op,">") == 0){printf(" jle");}
+	else if(strcmp(op,"<=") == 0){printf(" jg");}
+	else if(strcmp(op,">=") == 0){printf(" jl");}
+	else{error("Unsupported operator: %s\n",op);}
+	printf(" %s_%d\n",label_type,label_no);
 }
 
-void generate_if_else(n_ife* i){
-	printf(" ; if-else statement.\n")
+void generate_if(n_node* n)
+{
+	int label_no = ++if_stmt_count;
+ printf(" ; if statement.\n");
+	generate_jump_cond((n_binary*)(((n_ifs*)n)->cond),label_no,"_if_stmt_false");
+	if(n->ntype == N_IFE){
+		generate_block(((n_ife*)n)->t);
+	}else{
+		generate_block(((n_ifs*)n)->body);
+	}
+	printf(" jmp _if_stmt_end_%d\n",label_no);
+	printf("_if_stmt_false_%d: \n",label_no);
+	if(n->ntype == N_IFE){
+		generate_block(((n_ife*)n)->f);
+	}
+	printf("_if_stmt_end_%d: \n",label_no);
 }
 
 void generate_while(n_while* w)
@@ -164,10 +186,9 @@ void generate_block(n_block* n)
    case N_DECL:
    break;
    case N_IFS:
-    generate_if((n_ifs*)stmt);
-   break;
 			case N_IFE:
-				generate_if_else((n_ife*)stmt);
+    generate_if(stmt);
+   break;
    case N_WHILE:
     generate_while((n_while*)stmt);
    break;

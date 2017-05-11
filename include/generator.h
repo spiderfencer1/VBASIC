@@ -17,7 +17,7 @@ typedef struct{
 
 void generate_let(n_assign*);
 void generate_return(n_return*);
-void generate_if(n_ifs*);
+void generate_if(n_node*);
 void generate_while(n_while*);
 void generate_print(n_print*);
 void generate_input(n_input*);

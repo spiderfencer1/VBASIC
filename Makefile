@@ -11,5 +11,5 @@ clean:
 test:
 	$(MAKE) clean
 	$(MAKE)
-	./basicc tests/basic/a.bas >> a.s
-	./casm a
+	./basicc tests/basic/b.bas > b.s
+	./casm b

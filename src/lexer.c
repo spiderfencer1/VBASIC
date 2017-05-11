@@ -110,7 +110,12 @@ vec* tokenize(char* buf)
      vecadd(tokens,newtok("gtn",">"));
      break;
     case '=':
-     vecadd(tokens,newtok("equal","="));
+					if (pos < strlen(buf) && buf[pos] == '='){
+						pos++;
+						vecadd(tokens,newtok("equal","=="));
+					}else{
+						vecadd(tokens,newtok("assign","="));
+					}
      break;
     case ',':
      vecadd(tokens,newtok("comma",","));
