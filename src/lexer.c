@@ -20,7 +20,8 @@ vec* tokenize(char* buf)
  char* keywords[] = 
  {
   "Function","End","Integer","As","Dim","Let","Return",
-  "If","Then","Else","Do","While","Loop","Print","Input"
+  "If","Then","Else","Do","While","Loop","Print","Input",
+		"Window","Rect","Polygon","Line"
  };
 
  while (pos < strlen(buf))
