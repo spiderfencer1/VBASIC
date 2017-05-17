@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=std=c99 -o
+CLAGS=std=c99 -o
 OUT=basicc
 
 all:

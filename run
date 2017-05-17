@@ -1,0 +1,4 @@
+#!/bin/bash
+gcc src/*.c -std=c99 -o basicc
+./basicc $1.bas > $1.s
+./casm $1
