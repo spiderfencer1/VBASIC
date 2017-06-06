@@ -150,8 +150,13 @@ void generate_print(n_print* p){
  " sub esp,4\n"
  " push eax\n"
  " push message\n"
- " mov eax,1\n"
- " call _printf\n"
+ " mov eax,1\n");
+#ifdef __MACH__
+  printf(" call _printf\n");
+#else
+  printf(" call printf\n");
+#endif
+ printf(
  " add esp,12\n"
  " mov esp,[esp]\n"
  " add esp,4\n"
@@ -164,10 +169,13 @@ void generate_input(n_input* i)
  " mov eax,1\n"
  " sub esp,8\n"
  " push ebx\n"
- " push pattern\n"
- " call _scanf\n"
- " add esp,16\n"
- );
+ " push pattern\n");
+#ifdef __MACH__
+  printf(" call _scanf\n");
+#else
+  printf(" call scanf\n");
+#endif
+  printf(" add esp,16\n");
 }
 
 void generate_block(n_block* n)
@@ -214,17 +222,32 @@ void generate_funct(fntempl* f,n_func* nf)
 
 void generate(n_prog* n,vec* fncs)
 {
- printf("global _main\n"
- "section .bss\n"
- " input: resd 1\n"
- "extern _scanf\n"
- "extern _printf\n"
- "section .data\n"
+#ifdef __MACH__
+  printf("global _main\n");
+#else
+  printf("global main\n");
+#endif
+ printf("section .bss\n"
+ " input: resd 1\n");
+#ifdef __MACH__
+  printf("extern _scanf\n"
+  "extern _printf\n"
+  );
+#else
+  printf("extern scanf\n"
+  "extern printf\n"
+  );
+#endif
+ printf("section .data\n"
  " pattern: db \"%%d\",0\n"
  " message: db \"%%d\",10,0\n"
- "section .text\n"
- "_main:\n"
- " jmp fun_Main\n");
+ "section .text\n");
+#ifdef __MACH__
+  printf("_main:\n");
+#else
+  printf("main:\n");
+#endif
+ printf(" jmp fun_Main\n");
  for(int i=0;i<fncs->len;i++)
  {
   fntempl* f = (fntempl*)vecget(fncs,i);
