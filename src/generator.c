@@ -5,9 +5,12 @@
 #include "../include/generator.h"
 #include "../include/parser.h"
 #include "../include/sym_table.h"
+#include "../include/sym_table_node.h"
 #include "../include/vec.h"
 
 int if_stmt_count = 0;
+int while_stmt_count = 0;
+sym_table* st;
 
 void generate_const(n_const* c)
 {
@@ -15,10 +18,26 @@ void generate_const(n_const* c)
  printf(" push dword %ld\n",c->val);
 }
 
+void get_stack_offset(int offset){
+ if(offset >= 0){
+  printf(" [ebp+%d]\n",offset);
+ }
+ printf(" [ebp%d]\n",offset);
+}
+
 void generate_var(n_var* v)
 {
  printf(" ; variable.\n");
- //printf(" push ")
+ sym_table_node* stn = (sym_table_node*)symtableget(st,v->name);
+ if(stn == NULL){
+  error("Undeclared variable: %s.\n",v->name);
+ }
+ printf(" push dword");
+ get_stack_offset(stn->offset);
+}
+
+void generate_dim(n_decl* d){
+ symtabledecl(st,d->name,NUM_LOCAL); 
 }
 
 void generate_bin(n_binary* b)
@@ -83,7 +102,14 @@ void generate_value(n_node* n){
 
 void generate_let(n_assign* a)
 {
- printf(" ; assignment %s.\n",a->name);
+ generate_value((n_node*)a->rval);
+ printf(" ; assignment %s.\n pop dword",a->name);
+ sym_table_node* stn = symtableget(st,a->name);
+ if(stn == NULL){
+  error("Undeclared variable: %s.\n",a->name);
+  return;
+ }
+ get_stack_offset(stn->offset);
 }
 
 void generate_return(n_return* r)
@@ -131,9 +157,10 @@ void generate_if(n_node* n)
 
 void generate_while(n_while* w)
 {
- printf(" ; while statement.\n"
-
- );
+ int label_no = ++while_stmt_count;
+ printf(" ; while statement.\n_while_stmt_start_%d",label_no);
+ generate_jump_cond((n_binary*)(((n_while*)n)->cond));
+ if(
 }
 
 void generate_print(n_print* p){
@@ -173,7 +200,7 @@ void generate_input(n_input* i)
 #ifdef __MACH__
   printf(" call _scanf\n");
 #else
-  printf(" call scanf\n");
+  printf(" call __isoc99_scanf\n");
 #endif
   printf(" add esp,16\n");
 }
@@ -192,6 +219,7 @@ void generate_block(n_block* n)
     generate_return((n_return*)stmt);
    break;
    case N_DECL:
+    generate_dim((n_decl*)stmt);
    break;
    case N_IFS:
 			case N_IFE:
@@ -217,6 +245,10 @@ void generate_funct(fntempl* f,n_func* nf)
 {
  printf("fun_%s:\n",f->name);
  printf(" enter 0,0\n");
+ st = newsymtable();
+ for(int i=0;i<f->args->len;i++){
+  symtabledecl(st,((fnvar*)vecget(f->args,i))->name,NUM_PARAM);
+ }
  generate_block(nf->body);
 }
 
@@ -234,7 +266,7 @@ void generate(n_prog* n,vec* fncs)
   "extern _printf\n"
   );
 #else
-  printf("extern scanf\n"
+  printf("extern __isoc99_scanf\n"
   "extern printf\n"
   );
 #endif

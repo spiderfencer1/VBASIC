@@ -9,19 +9,6 @@ section .data
 section .text
 main:
  jmp fun_Main
-fun_IsPrime:
- enter 0,0
- ; constant.
- push dword 2
- ; assignment Divisor.
- pop dword [ebp-4]
- ; while statement.
- ; constant.
- push dword 1
- ; return statement.
- pop eax
- leave
- ret
 fun_Main:
  enter 0,0
  ; input statement.
@@ -31,13 +18,21 @@ fun_Main:
  push pattern
  call __isoc99_scanf
  add esp,16
- ; constant.
- push dword 2
- ; assignment N.
- pop dword [ebp-4]
- ; while statement.
- ; constant.
- push dword 0
+ ; print statement.
+ mov eax,[esp]
+ mov ebx,esp
+ and esp,0xfffffff0
+ push ebx
+ sub esp,4
+ push eax
+ push message
+ mov eax,1
+ call printf
+ add esp,12
+ mov esp,[esp]
+ add esp,4
+ ; variable.
+ push dword [ebp-4]
  ; return statement.
  pop eax
  leave

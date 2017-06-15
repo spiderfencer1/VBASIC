@@ -143,7 +143,6 @@ void exec(char* buf,opts* o)
 int main(int argc, char** argv)
 {
  USAGE(argv[0],argc < 2);
- int debug = 0;
  opts* o = parse_opts(argc,argv);
  if(o->repl)
  {
