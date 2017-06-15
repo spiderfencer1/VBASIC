@@ -20,9 +20,9 @@ void generate_const(n_const* c)
 
 void get_stack_offset(int offset){
  if(offset >= 0){
-  printf(" [ebp+%d]\n",offset);
+  printf(" [ebp+%d]",offset);
  }
- printf(" [ebp%d]\n",offset);
+ printf(" [ebp%d]",offset);
 }
 
 void generate_var(n_var* v)
@@ -34,6 +34,7 @@ void generate_var(n_var* v)
  }
  printf(" push dword");
  get_stack_offset(stn->offset);
+ printf("\n");
 }
 
 void generate_dim(n_decl* d){
@@ -110,6 +111,7 @@ void generate_let(n_assign* a)
   return;
  }
  get_stack_offset(stn->offset);
+ printf("\n");
 }
 
 void generate_return(n_return* r)
@@ -159,8 +161,10 @@ void generate_while(n_while* w)
 {
  int label_no = ++while_stmt_count;
  printf(" ; while statement.\n_while_stmt_start_%d",label_no);
- generate_jump_cond((n_binary*)(((n_while*)n)->cond));
- if(
+ generate_jump_cond((n_binary*)(((n_while*)w)->cond),label_no,"_while_stmt_end");
+ generate_block(w->body);
+ generate_jump_cond((n_binary*)(((n_while*)w)->cond),label_no,"_while_stmt_end");
+ printf(" jmp _while_stmt_start_%d",label_no);
 }
 
 void generate_print(n_print* p){
@@ -168,6 +172,15 @@ void generate_print(n_print* p){
   generate_bin((n_binary*)p->rval);
  }else if(p->rval->ntype == N_CONST){
   generate_const((n_const*)p->rval);
+ }else if(p->rval->ntype == N_VAR){
+  printf(" push dword");
+  n_var* v = (n_var*)(p->rval);
+  sym_table_node* stn = symtableget(st,v->name);
+  if(stn == NULL){
+   error("Undeclared variable: %s",v->name);
+  }
+  get_stack_offset(stn->offset);
+  printf("\n");
  }
  printf(" ; print statement.\n"
  " mov eax,[esp]\n"
@@ -202,7 +215,14 @@ void generate_input(n_input* i)
 #else
   printf(" call __isoc99_scanf\n");
 #endif
-  printf(" add esp,16\n");
+ printf(" add esp,16\n");
+ printf(" mov");
+ sym_table_node* stn = symtableget(st,i->name);
+ if(stn == NULL){
+  error("Undeclared variable: %s",i->name);
+ }
+ get_stack_offset(stn->offset);
+ printf(",ebx\n");
 }
 
 void generate_block(n_block* n)
@@ -217,7 +237,7 @@ void generate_block(n_block* n)
    break;
    case N_RETURN:
     generate_return((n_return*)stmt);
-   break;
+    break;
    case N_DECL:
     generate_dim((n_decl*)stmt);
    break;

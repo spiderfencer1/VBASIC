@@ -12,27 +12,15 @@ main:
 fun_Main:
  enter 0,0
  ; input statement.
- mov eax,1
+ mov eax,0
  sub esp,8
  push ebx
  push pattern
  call __isoc99_scanf
  add esp,16
- ; print statement.
- mov eax,[esp]
- mov ebx,esp
- and esp,0xfffffff0
- push ebx
- sub esp,4
- push eax
- push message
- mov eax,1
- call printf
- add esp,12
- mov esp,[esp]
- add esp,4
- ; variable.
- push dword [ebp-4]
+ mov [ebp-4],ebx
+ ; constant.
+ push dword 0
  ; return statement.
  pop eax
  leave
